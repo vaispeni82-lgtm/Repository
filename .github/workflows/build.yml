@@ -9,10 +9,12 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Move file
+      - name: Fix Directories
         run: |
           mkdir -p src/main/java/net/fabricmc/example/
-          mv src/main/ServerMenuScreen.java src/main/java/net/fabricmc/example/ServerMenuScreen.java
+          if [ -f src/main/ServerMenuScreen.java ]; then
+            mv src/main/ServerMenuScreen.java src/main/java/net/fabricmc/example/ServerMenuScreen.java
+          fi
       - run: chmod +x gradlew && ./gradlew build
       - uses: actions/upload-artifact@v3
         with:
