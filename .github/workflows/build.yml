@@ -12,17 +12,11 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Install Gradle Wrapper
-        run: |
-          mkdir -p gradle/wrapper
-          curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/FabricMC/fabric-example-mod/1.20/gradle/wrapper/gradle-wrapper.jar
-          curl -L -o gradle/wrapper/gradle-wrapper.properties https://raw.githubusercontent.com/FabricMC/fabric-example-mod/1.20/gradle/wrapper/gradle-wrapper.properties
-          curl -LO https://raw.githubusercontent.com/FabricMC/fabric-example-mod/1.20/gradlew
-          chmod +x gradlew
-
-      - name: Build with Gradle
-        run: ./gradlew build --no-daemon
-        
+      - name: Setup Gradle and Build
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: build
+          
       - name: Upload Finished Jar
         uses: actions/upload-artifact@v3
         with:
