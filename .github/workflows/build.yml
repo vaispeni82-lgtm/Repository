@@ -12,22 +12,44 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Download missing Gradle files
+      - name: Download Wrapper
         run: |
           curl -LO https://raw.githubusercontent.com/FabricMC/fabric-example-mod/1.20/gradlew
           chmod +x gradlew
           mkdir -p gradle/wrapper
           curl -L -o gradle/wrapper/gradle-wrapper.properties https://raw.githubusercontent.com/FabricMC/fabric-example-mod/1.20/gradle/wrapper/gradle-wrapper.properties
           curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/FabricMC/fabric-example-mod/1.20/gradle/wrapper/gradle-wrapper.jar
-          if [ ! -f build.gradle ]; then
-            curl -LO https://raw.githubusercontent.com/FabricMC/fabric-example-mod/1.20/build.gradle
-          fi
-          if [ ! -f settings.gradle ]; then
-            curl -LO https://raw.githubusercontent.com/FabricMC/fabric-example-mod/1.20/settings.gradle
+
+      - name: Create Clean Configs
+        run: |
+          rm -f build.gradle settings.gradle
+          echo "pluginManagement { repositories { maven { url 'https://maven.fabricmc.net/' } mavenCentral() } }" > settings.gradle
+          
+          cat << 'EOF' > build.gradle
+          plugins {
+              id 'fabric-loom' version '1.3-SNAPSHOT'
+          }
+          sourceCompatibility = JavaVersion.VERSION_17
+          targetCompatibility = JavaVersion.VERSION_17
+          repositories {
+              mavenCentral()
+          }
+          dependencies {
+              minecraft "com.mojang:minecraft:1.20.1"
+              mappings "net.fabricmc:yarn:1.20.1+build.10:v2"
+              modImplementation "net.fabricmc:fabric-loader:0.14.22"
+          }
+          EOF
+
+      - name: Move Source Files
+        run: |
+          mkdir -p src/main/java/net/fabricmc/example/
+          if [ -f src/main/ServerMenuScreen.java ]; then
+            mv src/main/ServerMenuScreen.java src/main/java/net/fabricmc/example/ServerMenuScreen.java
           fi
 
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew build --no-daemon
         
       - name: Upload Mod Jar
         uses: actions/upload-artifact@v3
