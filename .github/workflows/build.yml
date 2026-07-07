@@ -14,14 +14,9 @@ jobs:
 
       - name: Hard Clean and Setup Project
         run: |
-          # Полностью сносим старые проблемные папки, если они кривые
           rm -rf src/
-          
-          # Создаем идеальную структуру заново
           mkdir -p src/main/java/net/fabricmc/example/
           mkdir -p src/main/resources/
-          
-          # Качаем чистый Gradle Wrapper
           mkdir -p gradle/wrapper
           curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/FabricMC/fabric-example-mod/1.20/gradle/wrapper/gradle-wrapper.jar
           curl -L -o gradle/wrapper/gradle-wrapper.properties https://raw.githubusercontent.com/FabricMC/fabric-example-mod/1.20/gradle/wrapper/gradle-wrapper.properties
@@ -124,7 +119,6 @@ jobs:
           EOF
 
       - name: Build with Gradle
-          # Запускаем сборку
         run: ./gradlew build --no-daemon
         
       - name: Upload Finished Jar
@@ -132,4 +126,4 @@ jobs:
         with:
           name: Minecraft-Mod
           path: build/libs/*.jar
-          
+  
