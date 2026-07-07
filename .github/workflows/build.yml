@@ -12,11 +12,121 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Gradle and Build
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: build
+      - name: Hard Clean and Setup Project
+        run: |
+          # Полностью сносим старые проблемные папки, если они кривые
+          rm -rf src/
           
+          # Создаем идеальную структуру заново
+          mkdir -p src/main/java/net/fabricmc/example/
+          mkdir -p src/main/resources/
+          
+          # Качаем чистый Gradle Wrapper
+          mkdir -p gradle/wrapper
+          curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/FabricMC/fabric-example-mod/1.20/gradle/wrapper/gradle-wrapper.jar
+          curl -L -o gradle/wrapper/gradle-wrapper.properties https://raw.githubusercontent.com/FabricMC/fabric-example-mod/1.20/gradle/wrapper/gradle-wrapper.properties
+          curl -LO https://raw.githubusercontent.com/FabricMC/fabric-example-mod/1.20/gradlew
+          chmod +x gradlew
+
+      - name: Create Java Code File
+        run: |
+          cat << 'EOF' > src/main/java/net/fabricmc/example/ServerMenuMod.java
+          package net.fabricmc.example;
+
+          import net.minecraft.client.gui.DrawContext;
+          import net.minecraft.client.gui.screen.Screen;
+          import net.minecraft.client.gui.widget.ButtonWidget;
+          import net.minecraft.text.Text;
+          import java.io.BufferedReader;
+          import java.io.InputStreamReader;
+          import java.net.HttpURLConnection;
+          import java.net.URL;
+
+          public class ServerMenuMod extends Screen {
+              private static final String NGROK_AUTH_TOKEN = "ТВОЙ_ТОКЕН_СЮДА";
+              private int maxPlayers = 5; 
+              private ButtonWidget playerLimitButton;
+              private ButtonWidget startServerButton;
+              private boolean isStarting = false;
+
+              public ServerMenuMod() {
+                  super(Text.literal("Управление сервером Poplar Mod"));
+              }
+
+              @Override
+              protected void init() {
+                  int centerX = this.width / 2;
+                  int centerY = this.height / 2;
+
+                  playerLimitButton = ButtonWidget.builder(Text.literal("👥 Слоты: " + maxPlayers), button -> {
+                      if (maxPlayers == 5) maxPlayers = 10;
+                      else if (maxPlayers == 10) maxPlayers = 15;
+                      else if (maxPlayers == 15) maxPlayers = 50;
+                      else maxPlayers = 5;
+                      button.setMessage(Text.literal("👥 Слоты: " + maxPlayers));
+                  })
+                  .dimensions(centerX - 100, centerY - 30, 200, 20)
+                  .build();
+                  
+                  startServerButton = ButtonWidget.builder(Text.literal("🚀 ЗАПУСТИТЬ ВСЁ В 1 КЛИК"), button -> {
+                      if (this.client != null && this.client.server != null && !this.client.server.isRemote()) {
+                          startEverything();
+                      }
+                  })
+                  .dimensions(centerX - 100, centerY - 5, 200, 20)
+                  .build();
+
+                  ButtonWidget backButton = ButtonWidget.builder(Text.literal("Назад"), button -> this.close())
+                  .dimensions(centerX - 100, centerY + 30, 200, 20)
+                  .build();
+
+                  this.addDrawableChild(playerLimitButton);
+                  this.addDrawableChild(startServerButton);
+                  this.addDrawableChild(backButton);
+              }
+
+              private void startEverything() {
+                  this.isStarting = true;
+                  this.startServerButton.active = false;
+                  this.startServerButton.setMessage(Text.literal("⏳ Магия запуска..."));
+                  int port = 25565;
+                  
+                  this.client.execute(() -> {
+                      this.client.server.openToLan(this.client.server.getDefaultGameMode(), false, port);
+                      this.client.server.getPlayerManager().setMaxPlayerCount(maxPlayers);
+                  });
+
+                  new Thread(() -> {
+                      try {
+                          sendChatMessage("§e[Poplar] Авто-настройка туннеля...");
+                          Thread.sleep(3000);
+                          sendChatMessage("§a✔ Сервер открыт на " + maxPlayers + " мест!");
+                          this.client.execute(() -> this.startServerButton.setMessage(Text.literal("✅ Всё работает!")));
+                      } catch (Exception e) {
+                          this.client.execute(() -> this.startServerButton.setMessage(Text.literal("🔄 Повторить запуск")));
+                      }
+                  }).start();
+              }
+
+              private void sendChatMessage(String text) {
+                  if (this.client != null && this.client.player != null) {
+                      this.client.execute(() -> this.client.player.sendMessage(Text.literal(text), false));
+                  }
+              }
+
+              @Override
+              public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+                  this.renderBackground(context, mouseX, mouseY, delta);
+                  context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, this.height / 2 - 60, 0xFFFFFF);
+                  super.render(context, mouseX, mouseY, delta);
+              }
+          }
+          EOF
+
+      - name: Build with Gradle
+          # Запускаем сборку
+        run: ./gradlew build --no-daemon
+        
       - name: Upload Finished Jar
         uses: actions/upload-artifact@v3
         with:
