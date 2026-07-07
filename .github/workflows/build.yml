@@ -116,7 +116,7 @@ jobs:
                   super.render(context, mouseX, mouseY, delta);
               }
           }
-          EOF
+    
 
       - name: Build with Gradle
         run: ./gradlew build --no-daemon
